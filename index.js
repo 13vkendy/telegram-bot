@@ -1,11 +1,17 @@
 import { Telegraf, Markup } from 'telegraf';
+import express from 'express';
+import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+const app = express();
+app.use(express.json());
+
+// ✅ Telegram botni ishga tushirish
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Start komandasi
+// === BOT KODI ===
 bot.start((ctx) => {
   ctx.reply(
     `Salom, ${ctx.from.first_name}! IELTS Practice Botga xush kelibsiz.`,
@@ -16,19 +22,17 @@ bot.start((ctx) => {
   );
 });
 
-// Reading menyusi
 bot.action('reading', (ctx) => {
   ctx.editMessageText(
-    'Quyidagi passagelardan birini tanlang:',
+    'Quyidagi IELTS passagelardan birini tanlang:',
     Markup.inlineKeyboard([
-      [Markup.button.url('📖 Passage 1', 'https://your-netlify-link.netlify.app')],
-      [Markup.button.url('📖 Passage 2', 'https://your-netlify-link.netlify.app/passage2')],
+      [Markup.button.url('📖 Passage 1', `https://YOUR-NETLIFY-LINK.netlify.app/passage1.html?user=${ctx.from.id}`)],
+      [Markup.button.url('📖 Passage 2', `https://YOUR-NETLIFY-LINK.netlify.app/passage2.html?user=${ctx.from.id}`)],
       [Markup.button.callback('⬅️ Back', 'back')]
     ])
   );
 });
 
-// Help menyusi
 bot.action('help', (ctx) => {
   ctx.editMessageText(
     'Botdan foydalanish oson:\n1️⃣ Passage tanlang\n2️⃣ Web sahifada highlight va test bajaring\n✅ Natijani ko‘ring!',
@@ -36,7 +40,6 @@ bot.action('help', (ctx) => {
   );
 });
 
-// Back
 bot.action('back', (ctx) => {
   ctx.editMessageText(
     `Salom, ${ctx.from.first_name}! IELTS Practice Botga xush kelibsiz.`,
@@ -47,5 +50,24 @@ bot.action('back', (ctx) => {
   );
 });
 
+// === API NATIJA QABUL QILISH ===
+app.post('/result', async (req, res) => {
+  const { userId, correct, total } = req.body;
+  const message = `📊 Natijangiz:\n✅ To‘g‘ri: ${correct}/${total}\n🔥 Davom eting!`;
+
+  await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: userId, text: message })
+  });
+
+  res.json({ status: 'ok' });
+});
+
+// ✅ Railway uchun to‘g‘ri PORT sozlamasi
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ API ishlayapti: ${PORT}`));
+
 bot.launch();
 console.log('✅ Bot ishga tushdi...');
+
